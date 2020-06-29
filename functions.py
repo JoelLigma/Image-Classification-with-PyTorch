@@ -48,7 +48,7 @@ def get_input_args():
                         help="Please enter the number of hidden layers as list format. For vgg choose 25088 (default) and for alexnet choose 9216")
     parser.add_argument("--hidden_layers", type = int, default = 512, 
                         help="Please enter the number of hidden layers as list format. (Default = [25088, 512]")
-    parser.add_argument("--output_nodes", type = int, default = 102,
+    parser.add_argument("--output_size", type = int, default = 102,
                         help="Please enter the number of output nodes. (Default = 102)")
     parser.add_argument("--gpu", type = bool, default = True,
                         help="Please specify if you would like to use GPU or CPU to train the model (True/False). (Default = True)")
