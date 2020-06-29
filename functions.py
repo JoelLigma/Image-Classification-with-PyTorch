@@ -125,7 +125,7 @@ def build_classifier(arch, in_features, hidden_layers, output_size, learning_rat
                                             ('fc2', nn.Linear(hidden_layers, 128)),
                                             ('relu', nn.ReLU()),
                                             ('dropout2',nn.Dropout(0.5)),
-                                            ('fc3', nn.Linear(128, output_nodes)), # output defined by user
+                                            ('fc3', nn.Linear(128, output_size)), # output defined by user
                                             ('output', nn.LogSoftmax(dim=1))
                                             ]))
     model.classifier = model
