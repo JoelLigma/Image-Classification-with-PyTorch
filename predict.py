@@ -13,7 +13,7 @@ from PIL import Image
 import argparse 
 # import defined functions from functions.py
 import functions
-from functions import get_input_args, process_image, load_checkpoint, predict
+from functions import get_input_args, process_image, load_checkpoint, predict, get_labels
 
 ''' 
 This file let's the user employ a trained neural network to make predictions on unseen data.
@@ -28,8 +28,9 @@ def main():
     new_image = process_image(in_arg.image_path)
     # predict on unseen image data
     probs, classes = predict(new_image, model_checkpoint, in_arg.topk, in_arg.gpu) 
+    # get labels
+    get_labels(probs, classes, model_checkpoint)
 # Call to main function to run the program
 if __name__ == "__main__":
     main()
-
 
