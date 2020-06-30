@@ -12,6 +12,7 @@ import PIL
 from PIL import Image
 import argparse 
 from collections import OrderedDict
+from pathlib import Path
 
 '''
 This .py file contains the functions responsible for training a neural network and making new predictions on unseen data.
@@ -37,19 +38,19 @@ def get_input_args():
     # Create command line arguments using add_argument() from ArguementParser method
     # start with arguments used to train the model
     parser.add_argument('--data_dir', type = str, default = "flowers",
-                        help='Please enter path to folder of training and test data of images')
+                         help='Please enter path to folder of training and test data of images')
     parser.add_argument('--arch', type = str, default = 'vgg16', 
                         help='Please enter a CNN model architecture: "vgg16" or "alexnet"')
     parser.add_argument("--learning_rate", type = float, default = 0.001,
                         help="Please specify a learning rate. (default = 0.001")
-    parser.add_argument("--epochs", type = int, default = 0,
-                        help="Please enter the number of epochs to train the model. (default = 3)")
     parser.add_argument("--in_features", type = int, default = 25088, 
                         help="Please enter the number of hidden layers as list format. For vgg choose 25088 (default) and for alexnet choose 9216")
     parser.add_argument("--hidden_layers", type = int, default = 512, 
                         help="Please enter the number of hidden layers as list format. (Default = [25088, 512]")
     parser.add_argument("--output_size", type = int, default = 102,
                         help="Please enter the number of output nodes. (Default = 102)")
+    parser.add_argument("--epochs", type = int, default = 3,
+                        help="Please enter the number of epochs to train the model. (default = 3)")
     parser.add_argument("--gpu", type = bool, default = True,
                         help="Please specify if you would like to use GPU or CPU to train the model (True/False). (Default = True)")
     parser.add_argument("--saving_dir", type = str, default = "checkpoint_1.pth",
@@ -101,7 +102,8 @@ def load_and_transform(data_dir): # default is flowers dataset
     trainloader = torch.utils.data.DataLoader(train_data, batch_size=64, shuffle=True)
     validationloader = torch.utils.data.DataLoader(validation_data, batch_size=64, shuffle=True)
     testloader = torch.utils.data.DataLoader(test_data, batch_size=64, shuffle=True)
-
+    print("Input data was loaded and processed succesfully.")
+    
     return trainloader, validationloader, testloader, train_data
 
 ## After loading and processing the data, the user can build his/her model
@@ -110,14 +112,18 @@ def load_and_transform(data_dir): # default is flowers dataset
 def build_classifier(arch, in_features, hidden_layers, output_size, learning_rate): 
     if arch == "vgg16":
         model = torchvision.models.vgg16(pretrained=True)
+         # freeze pre-trained model parameters
+        for param in model.parameters():
+            param.requires_grad = False
     elif arch == "alexnet":
         model = torchvision.models.alexnet(pretrained=True)
+         # freeze pre-trained model parameters
+        for param in model.parameters():
+            param.requires_grad = False
     else:
         print("Sorry this model is not available. Please choose between vgg16 and alexnet.")
                     
-    # freeze pre-trained model parameters
-        for param in model.parameters():
-            param.requires_grad = False
+   
     
     classifier = nn.Sequential(OrderedDict([('fc1', nn.Linear(in_features, hidden_layers)), # arch and hidden layers specified by user
                                             ('relu', nn.ReLU()),
@@ -127,20 +133,35 @@ def build_classifier(arch, in_features, hidden_layers, output_size, learning_rat
                                             ('dropout2',nn.Dropout(0.5)),
                                             ('fc3', nn.Linear(128, output_size)), # output defined by user
                                             ('output', nn.LogSoftmax(dim=1))
-                                            ]))
-    model.classifier = model
+                                           ]))
+    model.classifier = classifier
+    # combine pre-trained nn with user-built classifier 
+    model.classifier = nn.Sequential(nn.Linear(in_features, hidden_layers),
+                                     nn.ReLU(),
+                                     nn.Dropout(0.5),
+                                     nn.Linear(hidden_layers, 128),
+                                     nn.ReLU(),
+                                     nn.Dropout(0.5),
+                                     nn.Linear(128, output_size),
+                                     nn.LogSoftmax(dim=1))
     # define loss criterion    
     criterion = nn.NLLLoss() #NLLLoss because of LogSoftMax
     # Only train the classifier parameters, feature parameters are frozen
-    optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate) #learning rate specified by user
-          
-    return model, criterion#, optimizer
+    optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)   #learning rate specified by user
+    print("Model was built successfully.")
+    return model, criterion, optimizer
+
 
 ## Training the model
 def train(epochs, trainloader, validationloader, optimizer, model, criterion, gpu):
+    ''' 
+    Trains the model. The user can specify the number of epochs and whether to use GPU or CPU.
+    '''
     # Use GPU if it's available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    #Use GPU if it's available
     if gpu == True:
-        model.to("cuda")
+        model.to(device)
     else:
         model.to("cpu")
     epochs = epochs 
@@ -153,9 +174,9 @@ def train(epochs, trainloader, validationloader, optimizer, model, criterion, gp
     for epoch in range(epochs):
         for inputs, labels in trainloader:
             steps += 1 # increment steps by 1
-        
+            start_time = time.time() 
             # Move input and label tensors to the default device (GPU if available)
-            inputs, labels = inputs.to("cuda" if torch.cuda.is_available() else "cpu"), labels.to("cuda" if torch.cuda.is_available() else "cpu")
+            inputs, labels = inputs.to(device), labels.to(device)
             # reset existing gradients
             optimizer.zero_grad()
 
@@ -174,7 +195,7 @@ def train(epochs, trainloader, validationloader, optimizer, model, criterion, gp
                 model.eval()
                 with torch.no_grad():
                     for inputs, labels in validationloader:
-                        inputs, labels = inputs.to("cuda" if torch.cuda.is_available() else "cpu"), labels.to("cuda" if torch.cuda.is_available() else "cpu")
+                        inputs, labels = inputs.to(device), labels.to(device)
                         logps = model.forward(inputs)
                         batch_loss = criterion(logps, labels)
 
@@ -196,42 +217,44 @@ def train(epochs, trainloader, validationloader, optimizer, model, criterion, gp
                 print("\n** Total Elapsed Runtime:",
                 str(int((tot_time/3600)))+":"+str(int((tot_time%3600)/60))+":"
                 +str(int((tot_time%3600)%60)),"\n")        
+    return model
 
 # saving the model   
-def save_model(model, optimizer, saving_dir, arch, hidden_layers, in_features, learning_rate, epochs, output_size, train_data):
+def save_model(trained_model, optimizer, saving_dir, arch, learning_rate, epochs, train_data):
     ''' 
     Saves the trained model and its parameters for future use.
     '''
-    model.class_to_idx = train_data.class_to_idx 
-
-    checkpoint={'classifier': model,
-                'architecture': arch, 
-                'state_dict': model.state_dict(),
+    trained_model.class_to_idx = train_data.class_to_idx 
+    trained_model.to("cpu")
+    checkpoint={'classifier': trained_model.classifier,
                 'optimizer': optimizer,
-                'class_to_idx': model.class_to_idx,
+                'architecture': arch, 
+                'state_dict': trained_model.state_dict(),
+                'class_to_idx': trained_model.class_to_idx,
                 'learning_rate': learning_rate,
                 'epochs': epochs}
 
     torch.save(checkpoint, saving_dir)
     
-    return print("Training complete and model is saved!" "\n" "You can now use the model to make predictions by entering 'python predict.py' in the command line.")   
+    print("Training complete and model is saved!" "\n" "You can now use the model to make predictions by entering 'python predict.py' in the command line.")   
 
 # load the checkpoint and rebuild the model
 def load_checkpoint(checkpoint):
     checkpoint = torch.load(checkpoint)
     if checkpoint["architecture"] == "vgg16":
         model = getattr(torchvision.models, "vgg16")(pretrained=True)
-    else:
+    elif checkpoint["architecture"] == "alexnet":
         model = getattr(torchvision.models, "alexnet")(pretrained=True)
+    else:
+        print("Unknown model entered. Please make sure you saved the right architecture (vgg16 or alexnet).") 
         
     model.classifier = checkpoint['classifier'] # contains input nodes, hidden layers and output nodes
+    model.optimizer = checkpoint['optimizer'] # in case we want to keep training the model
+    model.load_state_dict(checkpoint['state_dict']) # state dict holds the weights for all layers including classifier so we need to assign classifier first and then load the model state dict
     model.class_to_idx = checkpoint['class_to_idx']
-    model.optimizer = (checkpoint['optimizer']) # in case we want to keep training the model
     model.learning_rate = checkpoint['learning_rate'] # in case we want to keep training the model
     model.epochs = checkpoint['epochs'] # in case we want to keep training the model
-    model.load_state_dict(checkpoint['state_dict']) # state dict holds the weights for all layers including classifier so we need to assign classifier first and then load the model state dict
-    #optimizer.load_state_dict(checkpoint['optimizer_dict'])
-    print("Model loaded successfully.")
+    print("Model was loaded successfully.")
     return model
 
 # load and process unseen image data for prediction
@@ -251,26 +274,40 @@ def process_image(image_path):
     return pil_image
 
 # make predictions on unseen data
-def predict(new_image, model, topk, gpu):
-    ''' Predict the class (or classes) of an image using a trained deep learning model.
+def predict(new_image, model_checkpoint, topk, gpu):
+    ''' 
+    Predict the category of an image using a trained deep learning model.
     '''
+    print("Making predictions on unseen image data...")
     # used this as reference: https://knowledge.udacity.com/questions/30810
     # Process the input image with earlier defined function  
     new_image = new_image.unsqueeze(0) # not sure why it's needed but using it just to be sure. 
     #found this here: https://knowledge.udacity.com/questions/30304
     new_image = new_image.float() # convert to float because model expects float. Source: https://knowledge.udacity.com/questions/246749
-    model.eval() #set to eval() because we are not training the model anymore 
+    model_checkpoint.eval() #set to eval() because we are not training the model anymore 
     if gpu == "True":
-        model = model.to("cuda") # set both model and inputs (here: image) to "cuda" to use GPU
-        new_image = new_image.to("cuda")     
+        model_checkpoint = model_checkpoint.to("cuda" if torch.cuda.is_available() else "cpu") # set both model and inputs (here: image) to "cuda" to use GPU
+        new_image = new_image.to("cuda" if torch.cuda.is_available() else "cpu")     
     else:
-        model = model.to("cpu") # set both model and inputs (here: image) to "cuda" to use GPU
+        model_checkpoint = model_checkpoint.to("cpu") # set both model and inputs (here: image) to "cuda" to use GPU
         new_image = new_image.to("cpu")
     # using model to predict new image
     with torch.no_grad():
-        logps = model.forward(new_image)
+        logps = model_checkpoint.forward(new_image)
         ps = torch.exp(logps) # get actual probability distributions        
         probs, classes = ps.topk(topk, dim = 1) # get top k=5 largest values in a tensor from torch.topk()
-       
-        return probs, classes, print(probs,"\n", classes)
+
+        return probs, classes
+
+# get labels
+def get_labels(probs, classes, model_checkpoint):
+    with open('cat_to_name.json', 'r') as f:
+        cat_to_name = json.load(f)
+    probs = probs.type(torch.FloatTensor).to('cpu').numpy()[0] # conver to numpy array 
+    classes = classes.type(torch.FloatTensor).to('cpu').numpy()[0].tolist() # convert to list for compatability to get labels
+    idx_to_class = {v: k for k, v in model_checkpoint.class_to_idx.items()} 
+    flower_names = [idx_to_class[x] for x in classes]
+    flower_names = [cat_to_name[str(x)] for x in flower_names]
+    
+    print("Predictions complete. \n\nResults: \n \nCategory: {} \nProbability: {}".format(flower_names, probs))
  
