@@ -46,7 +46,7 @@ def get_input_args():
     parser.add_argument("--in_features", type = int, default = 25088, 
                         help="Please enter the number of hidden layers as list format. For vgg choose 25088 (default) and for alexnet choose 9216")
     parser.add_argument("--hidden_layers", type = int, default = 512, 
-                        help="Please enter the number of hidden layers as list format. (Default = [25088, 512]")
+                        help="Please enter the number of hidden layers as list format. (Default = 512)")
     parser.add_argument("--output_size", type = int, default = 102,
                         help="Please enter the number of output nodes. (Default = 102)")
     parser.add_argument("--epochs", type = int, default = 3,
@@ -152,7 +152,7 @@ def build_classifier(arch, in_features, hidden_layers, output_size, learning_rat
     return model, criterion, optimizer
 
 
-## Training the model
+## training the model
 def train(epochs, trainloader, validationloader, optimizer, model, criterion, gpu):
     ''' 
     Trains the model. The user can specify the number of epochs and whether to use GPU or CPU.
