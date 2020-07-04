@@ -42,7 +42,7 @@ def get_input_args():
     parser.add_argument('--arch', type = str, default = 'vgg16', 
                         help='Please enter a CNN model architecture: "vgg16" or "alexnet"')
     parser.add_argument("--learning_rate", type = float, default = 0.001,
-                        help="Please specify a learning rate. (default = 0.001")
+                        help="Please specify a learning rate. (Default = 0.001")
     parser.add_argument("--in_features", type = int, default = 25088, 
                         help="Please enter the number of hidden layers as list format. For vgg choose 25088 (default) and for alexnet choose 9216")
     parser.add_argument("--hidden_layers", type = int, default = 512, 
@@ -50,7 +50,7 @@ def get_input_args():
     parser.add_argument("--output_size", type = int, default = 102,
                         help="Please enter the number of output nodes. (Default = 102)")
     parser.add_argument("--epochs", type = int, default = 3,
-                        help="Please enter the number of epochs to train the model. (default = 3)")
+                        help="Please enter the number of epochs to train the model. (Default = 3)")
     parser.add_argument("--gpu", type = bool, default = True,
                         help="Please specify if you would like to use GPU or CPU to train the model (True/False). (Default = True)")
     parser.add_argument("--saving_dir", type = str, default = "checkpoint_1.pth",
