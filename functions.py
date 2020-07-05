@@ -98,7 +98,7 @@ def load_and_transform(data_dir): # default is flowers dataset
     validation_data = datasets.ImageFolder(data_dir + '/valid', transform=validationdata_transforms)
     test_data = datasets.ImageFolder(data_dir + '/test', transform=testdata_transforms)
 
-    # TODO: Using the image datasets and the trainforms, define the dataloaders
+# Using the image datasets and the trainforms, define the dataloaders
     trainloader = torch.utils.data.DataLoader(train_data, batch_size=64, shuffle=True)
     validationloader = torch.utils.data.DataLoader(validation_data, batch_size=64, shuffle=True)
     testloader = torch.utils.data.DataLoader(test_data, batch_size=64, shuffle=True)
