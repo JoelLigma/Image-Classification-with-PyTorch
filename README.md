@@ -4,6 +4,6 @@ Project code for Udacity's AI Programming with Python Nanodegree program. In thi
 
 This project allows users to utilize the concept of transfer and deep learning to choose a pre-trained neural network architecture, train a neural network classifier on a set of images and make predictions on new images.
 
-• Developed code in Jupyter Notebook for an image classifier built with PyTorch
-• Converted it into a command line application that takes user input
-• Neural Network architectures available to the user are VGG16 and Alexnet
+- Developed code in Jupyter Notebook for an image classifier built with PyTorch
+- Converted it into a command line application that takes user input
+- Neural Network architectures available to the user are VGG16 and Alexnet
