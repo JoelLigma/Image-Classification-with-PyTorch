@@ -7,3 +7,5 @@ This project allows users to utilize the concept of transfer and deep learning t
 - Developed code in Jupyter Notebook for an image classifier built with PyTorch
 - Converted it into a command line application that takes user input
 - Neural Network architectures available to the user are VGG16 and Alexnet
+
+Disclaimer: This application only runs on GPU-enabled machines or while having access to cloud GPUs
